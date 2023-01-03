@@ -173,12 +173,3 @@ const isAvailable = async (userName) => {
 }
 
 module.exports = router
-
-// {
-//     "name": "karan gupta",
-//     "age": 20,
-//     "gender": "male",
-//     "userName":"karan@090",
-//     "password":"karanPagalhai",
-//     "bio" : "me c nahi hu"
-// }
