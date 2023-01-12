@@ -2,13 +2,14 @@ const express = require("express")
 const app = express()
 const movieRouter = require("./routes/movies")
 const userRouter = require('./routes/user')
-const cors = require("cors")
+const reviewRouter = require('./routes/reviews')
 
 require('dotenv').config()
 
 app.use(express.json())
 app.use('/movies', movieRouter)
 app.use('/user', userRouter)
+app.use('/reviews', reviewRouter)
 
 app.get("/", (req, res) => {
     res.status(200).json({message: 'hello user'})

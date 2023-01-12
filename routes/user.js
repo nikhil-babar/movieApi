@@ -38,9 +38,10 @@ router.post('/login', async (req, res) => {
 
             if (user && bcrypt.compare(password, user.password)) {
                 delete user.password
+                delete user.iat
 
                 const token = new refreshToken({
-                    token: jwt.sign({ ...user }, process.env.REFRESH_TOKEN_SECRET)
+                    token: jwt.sign({...user}._doc, process.env.REFRESH_TOKEN_SECRET)
                 })
 
                 await token.save()
@@ -51,7 +52,7 @@ router.post('/login', async (req, res) => {
 
                 res.status(200).json({
                     user,
-                    accessToken: jwt.sign({ ...user }, process.env.ACCESS_TOKEN_SECRET, {
+                    accessToken: jwt.sign({...user}._doc, process.env.ACCESS_TOKEN_SECRET, {
                         expiresIn: '60s'
                     })
                 })
@@ -73,10 +74,12 @@ router.get("/getAccessToken", (req, res) => {
 
     try {
         const user = jwt.verify(token, process.env.REFRESH_TOKEN_SECRET)
-        
+
+        delete user.iat
+
         res.status(200).json({
-            user: user._doc,
-            accessToken: jwt.sign({ ...user._doc }, process.env.ACCESS_TOKEN_SECRET, {
+            user: user.name,
+            accessToken: jwt.sign({...user}, process.env.ACCESS_TOKEN_SECRET, {
                 expiresIn: '60s'
             })
         })
@@ -89,87 +92,44 @@ router.get("/getAccessToken", (req, res) => {
 
 router.post("/createAccount", async (req, res) => {
     try {
-        if (validate(req.body)) {
-            if (! await isAvailable(req.body.userName)) {
-                res.status(409).json({ message: 'userName already taken' })
-            } else {
-                const user = new User({ ...req.body, password: await bcrypt.hash(req.body.password, 10) })
-                await user.save()
+        const data = new User({ ...req.body, password: await bcrypt.hash(req.body.password, 10) })
+        const user = data.save()
 
-                const token = new refreshToken({
-                    token: jwt.sign({ ...user }, process.env.REFRESH_TOKEN_SECRET)
-                })
+        const token = new refreshToken({
+            token: jwt.sign({...user}._doc, process.env.REFRESH_TOKEN_SECRET)
+        })
 
-                await token.save()
+        await token.save()
 
-                res.cookie('token', token.token, {
-                    httpOnly: true,
-                })
+        res.cookie('token', token.token, {
+            httpOnly: true,
+        })
 
-
-                res.status(200).json({
-                    user,
-                    accessToken: jwt.sign({ ...user }, process.env.ACCESS_TOKEN_SECRET, {
-                        expiresIn: '60s'
-                    })
-                })
-            }
-        } else {
-            res.status(422).json({ message: 'invalid input' })
-        }
+        res.status(200).json({
+            user,
+            accessToken: jwt.sign({...user}._doc, process.env.ACCESS_TOKEN_SECRET, {
+                expiresIn: '60s'
+            })
+        })
 
     } catch (error) {
         console.log(error.message)
+
+        if (error?.name === 'ValidationError') {
+            let response = {}
+            let message = error.errors
+            console.log(message)
+
+            Object.keys(message).forEach((key) => {
+                response[key] = message[key].message
+            })
+
+            res.status(400).json({ ...response })
+            return
+        }
+
         res.status(500).json({ message: 'server side error' })
     }
 })
-
-const validate = (loginData) => {
-    for (const key of INPUT_FIELDS) {
-        if (typeof loginData[key] === 'undefined' || loginData[key] === null || loginData[key].length === 0) {
-            return false
-        }
-
-        switch (key) {
-            case "name":
-                if (loginData[key].match(/(\n|[^a-zA-Z\s])/)) {
-                    return false
-                }
-                break
-            case "age":
-                if (isNaN(loginData[key]) || Number(loginData[key]) < 10 || Number(loginData[key] > 110)) {
-                    return false
-                }
-                break
-            case "bio":
-                if (!loginData[key].match(/\S/)) {
-                    return false
-                }
-                break
-            case "gender":
-                break
-            case "userName":
-                if (loginData[key].match(/(\n|\s|[^a-zA-Z[0-9]]|(^[^a-zA-Z]))/)) {
-                    return false
-                }
-                break
-            case "password":
-                if (loginData[key].match(/(\n|\s)/)) {
-                    return false
-                }
-                break
-            default:
-                return false
-        }
-    }
-
-    return true
-}
-
-const isAvailable = async (userName) => {
-    const user = await User.exists({ userName: userName })
-    console.log(user)
-    return user === null ? true : false
-}
 
 module.exports = router
