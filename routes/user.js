@@ -5,24 +5,15 @@ const bodyParser = require('body-parser')
 const bcrypt = require('bcrypt')
 const User = require('../models/user')
 const refreshToken = require('../models/refreshToken')
-const db = require('mongoose')
 const jwt = require('jsonwebtoken')
-const INPUT_FIELDS = Object.keys(User.schema.paths).filter((value) => value !== '_id' && value !== '__v')
 const cookieParser = require('cookie-parser')
 
-
-db.set('strictQuery', true)
-
-db.connect(process.env.DATABASE_URL, {
-    useNewUrlParser: true
-}).then(() => console.log('connected to db'))
-    .catch((err) => console.log(err))
 
 router.use(bodyParser.urlencoded({ extended: true }))
 router.use(express.json())
 router.use(cookieParser())
 router.use(cors({
-    origin: 'http://localhost:3000',
+    origin: ['http://localhost:3000', 'http://192.168.43.41:3000'],
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
     credentials: true
 }))
@@ -36,7 +27,7 @@ router.post('/login', async (req, res) => {
                 userName: userName,
             })
 
-            if (user && bcrypt.compare(password, user.password)) {
+            if (user && await bcrypt.compare(password, user.password)) {
                 delete user.password
                 delete user.iat
 
@@ -78,7 +69,7 @@ router.get("/getAccessToken", (req, res) => {
         delete user.iat
 
         res.status(200).json({
-            user: user.name,
+            user,
             accessToken: jwt.sign({...user}, process.env.ACCESS_TOKEN_SECRET, {
                 expiresIn: '60s'
             })

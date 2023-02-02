@@ -2,52 +2,52 @@ const express = require("express")
 const router = express.Router()
 const cors = require('cors')
 const auth = require('../middleware/authentication')
-const axios = require('axios')
+const axios = require('../axiosClient')
 
 require('dotenv').config()
 
-const sliderDetails = [
+const TREND = [
     {
         title: 'Upcoming movies',
-        url: `https://api.themoviedb.org/3/movie/upcoming?api_key=${process.env.API_KEY}&language=en-US&page=1`
+        path: '/movie/upcoming'
     },
     {
         title: 'Top trending',
-        url: `https://api.themoviedb.org/3/movie/popular?api_key=${process.env.API_KEY}&language=en-US&page=1`
+        path: '/movie/popular'
     },
     {
         title: 'Top rated',
-        url: `https://api.themoviedb.org/3/movie/top_rated?api_key=${process.env.API_KEY}&language=en-US&page=1`
+        path: '/movie/top_rated'
     }
 ]
 
 router.use(cors({
-    origin: ['http://192.168.43.41:3000', 'http://localhost:3000'],
+    origin: ['http://192.168.43.41:3000'],
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
     credentials: true
 }))
 
 router.use(express.json())
 
-router.get("/", auth,  (_req, res) => {
+router.get("/", auth, (_req, res) => {
     const data = []
 
-    const promises = sliderDetails.map((e) => {       
-        return axios.get(e.url)
+    const promises = TREND.map((e) => {       
+        return axios.get(e.path)
     })
 
     Promise.all(promises)
         .then(response => {
-            for (let i = 0; i < sliderDetails.length; i++) {
+            for (let i = 0; i < TREND.length; i++) {
                 data.push({
-                    title: sliderDetails[i].title,
+                    title: TREND[i].title,
                     data: response[i].data.results
                 })
             }
 
             res.status(200).json(data)
         }).catch(err => {
-            console.log(err)
+            console.log(err.message)
             res.status(500).json({ message: err.message })
         })
 
@@ -55,21 +55,24 @@ router.get("/", auth,  (_req, res) => {
 
 router.get("/search", auth, async (req, res) => {
     try {
-        const url = new URL(`https://api.themoviedb.org/3/search/movie?api_key=${process.env.API_KEY}&language=en-US&page=1`)
+        const { term } = req.query
 
-        if (!req.query.term) {
+        if (!term) {
             res.status(422).json({ message: "Invalid input" })
             return
         }
 
-        url.searchParams.append('query', req.query.term)
+        const { data: response } = await axios.get('/search/movie', {
+            params: {
+                query: term
+            }
+        })
 
-        const response = await axios.get(url.href)
+        res.status(200).json(response.results)
 
-        res.status(200).json(response.data)
-
-    } catch (error) {
-        res.status(500).json(error.message)
+    } catch (err) {
+        console.log(err)
+        res.status(500).json({ message: err.message })
     }
 })
 
@@ -78,45 +81,48 @@ router.get("/genre", auth, async (req, res) => {
         const page = req.query.page
         const genre = req.query.genre
 
-        if (isNaN(page) || isNaN(genre)) res.status(422).json({ message: 'Invalid parameters' })
+        if (isNaN(page) || isNaN(genre)) {
+            res.status(422).json({ message: 'Invalid parameters' })
+            return
+        }
 
-        const url = new URL(`https://api.themoviedb.org/3/discover/movie?api_key=${process.env.API_KEY}`)
-        url.searchParams.append('page', page)
-        url.searchParams.append('with_genres', genre)
-
-        const response = await axios.get(url.href)
+        const response = await axios.get('/discover/movie', {
+            params: {
+                page,
+                with_genres: genre
+            }
+        })
 
         res.status(200).json(response.data)
-    } catch (error) {
-        res.status(500).json(error.message)
+    } catch (err) {
+        console.log(err)
+        res.status(500).json({ message: err.message })
     }
 })
 
-router.get("/:id", auth, (req, res) => {
-    const movieId = req.params.id
+router.get("/:id", auth, async (req, res) => {
+    try {
+        const movieId = req.params.id
 
-    const urls = [`https://api.themoviedb.org/3/movie/${movieId}?api_key=${process.env.API_KEY}`,
-    `https://api.themoviedb.org/3/movie/${movieId}/credits?api_key=${process.env.API_KEY}&language=en-US&page=1`,
-    `https://api.themoviedb.org/3/movie/${movieId}/recommendations?api_key=${process.env.API_KEY}&language=en-US&page=1`]
-
-    const promises = urls.map((url) => {
-        return axios.get(url)
-    })
-
-    Promise.all(promises)
-        .then(response => {
-            res.status(200).json({
-                details: response[0].data,
-                crew: getCrewDetails(response[1].data.cast, response[1].data.crew),
-                related: response[2].data.results
-            })
-        }).catch(err => {
-            if (err.response?.status === 404) {
-                res.status(404).json({ message: 'resource was not available' })
+        const { data: response } = await axios.get(`/movie/${movieId}`, {
+            params: {
+                append_to_response: 'videos,recommendations,credits'
             }
-            console.log(err)
-            res.status(500).json({ message: err.message })
         })
+    
+        const crew = getCrewDetails(response.credits.cast, response.credits.crew)
+    
+        res.status(200).json({
+            ...response,
+            videos: response.videos.results,
+            crew,
+            related: response.recommendations.results
+        })  
+
+    } catch (err) {
+        console.log(err)
+        res.status(500).json({ message: err.message })
+    }
 })
 
 
