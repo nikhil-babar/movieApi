@@ -5,8 +5,6 @@ const reviewRouter = require('./routes/reviews')
 const mongoose = require('mongoose')
 const admin = require('firebase-admin')
 
-require('dotenv').config()
-
 const firebaseConfig = {
     "type": process.env.TYPE,
     "project_id": proccess.env.PROJECT_ID,
