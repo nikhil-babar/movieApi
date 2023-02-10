@@ -5,17 +5,19 @@ const reviewRouter = require('./routes/reviews')
 const mongoose = require('mongoose')
 const admin = require('firebase-admin')
 
+require('dotenv').config()
+
 const firebaseConfig = {
     "type": process.env.TYPE,
-    "project_id": proccess.env.PROJECT_ID,
-    "private_key_id": proccess.env.PRIVATE_KEY_ID,
-    "private_key": proccess.env.PRIVATE_KEY,
-    "client_email": proccess.env.CLIENT_EMAIL,
-    "client_id": proccess.env.CLIENT_ID,
-    "auth_uri": proccess.env.AUTH_URI,
-    "token_uri": proccess.env.TOKEN_URI,
-    "auth_provider_x509_cert_url": proccess.env.AUTH_PROVIDER_X509_CERT_URL,
-    "client_x509_cert_url": proccess.env.CLIENT_X509_CERT_URL
+    "project_id": `${process.env.PROJECT_ID}`,
+    "private_key_id": process.env.PRIVATE_KEY_ID,
+    "private_key": (process.env.PRIVATE_KEY).replace(/\\n/g, '\n'),
+    "client_email": process.env.CLIENT_EMAIL,
+    "client_id": process.env.CLIENT_ID,
+    "auth_uri": process.env.AUTH_URI,
+    "token_uri": process.env.TOKEN_URI,
+    "auth_provider_x509_cert_url": process.env.AUTH_PROVIDER_X509_CERT_URL,
+    "client_x509_cert_url": process.env.CLIENT_X509_CERT_URL
 }
 
 admin.initializeApp({
