@@ -3,8 +3,17 @@ const router = express.Router()
 const cors = require('cors')
 const auth = require('../middleware/authentication')
 const axios = require('../axiosClient')
+const { request } = require("express")
 
 require('dotenv').config()
+
+request.on('error', (err) => {
+    console.log("request error" + err.message)
+})
+
+process.on('uncaughtException', (err) => {
+    console.log('process error' + err.message)
+})
 
 const TREND = [
     {
@@ -22,15 +31,19 @@ const TREND = [
 ]
 
 router.use(cors({
-    origin: ['http://192.168.43.41:3000'],
+    origin: ['https://movie-ocean.onrender.com'],
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
     credentials: true
 }))
 
 router.use(express.json())
 
-router.get("/", auth, (_req, res) => {
+router.get("/", auth,  (req, res) => {
     const data = []
+
+    req.on('error', (error) => {
+        console.log("Caught error" + error.message)
+    })
 
     const promises = TREND.map((e) => {       
         return axios.get(e.path)
@@ -47,7 +60,7 @@ router.get("/", auth, (_req, res) => {
 
             res.status(200).json(data)
         }).catch(err => {
-            console.log(err.message)
+            console.log("catched err" + err.message)
             res.status(500).json({ message: err.message })
         })
 
@@ -71,7 +84,7 @@ router.get("/search", auth, async (req, res) => {
         res.status(200).json(response.results)
 
     } catch (err) {
-        console.log(err)
+        console.log(err.message)
         res.status(500).json({ message: err.message })
     }
 })
@@ -95,7 +108,7 @@ router.get("/genre", auth, async (req, res) => {
 
         res.status(200).json(response.data)
     } catch (err) {
-        console.log(err)
+        console.log(err.message)
         res.status(500).json({ message: err.message })
     }
 })
@@ -120,7 +133,7 @@ router.get("/:id", auth, async (req, res) => {
         })  
 
     } catch (err) {
-        console.log(err)
+        console.log(err.message)
         res.status(500).json({ message: err.message })
     }
 })

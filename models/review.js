@@ -1,5 +1,4 @@
 const mongoose = require('mongoose')
-const User = require('./user')
 
 const review = new mongoose.Schema({
     title: {
@@ -27,15 +26,13 @@ const review = new mongoose.Schema({
         min: 0,
         required: true
     },
-    user: {
-        type: mongoose.SchemaTypes.ObjectId,
-        required: true,
-        ref: 'User',
-        validate: {
-            validator: async (e) => {
-                return User.exists({_id: e})
-            }
-        }
+    author: {
+        type: String,
+        required: true
+    },
+    uid: {
+        type: String,
+        required: true
     },
     content: {
         type: String,

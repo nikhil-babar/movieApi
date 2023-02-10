@@ -8,7 +8,7 @@ const bodyParser = require('body-parser')
 require('dotenv').config()
 
 router.use(cors({
-    origin: ['http://192.168.43.41:3000', 'http://localhost:3000'],
+    origin: ['https://movie-ocean.onrender.com'],
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
     credentials: true
 }))
@@ -38,7 +38,7 @@ router.get('/:id', auth, async (req, res) => {
         const next = (page * limit > totalCount) ? null : page + 1
         const previous = (page <= 1) ? null : page - 1
 
-        const reviews = await Review.find({ movieId: id }).sort({ updatedAt: -1 }).skip(index).limit(limit).populate('user', 'name userName')
+        const reviews = await Review.find({ movieId: id }).sort({ updatedAt: -1 }).skip(index).limit(limit)
 
         res.status(200).json({ totalCount, next, previous, limit, reviews })
 
@@ -50,10 +50,8 @@ router.get('/:id', auth, async (req, res) => {
 
 router.post('/', auth, async (req, res) => {
     try {
-        const review = new Review({ ...req.body, user: req.user._id })
+        const review = new Review({ ...req.body })
         const response = await review.save()
-
-        await response.populate('user', 'name userName')
 
         res.status(201).json(response)
     } catch (error) {
@@ -74,5 +72,7 @@ router.post('/', auth, async (req, res) => {
         res.status(500).json({ message: 'server side error' })
     }
 })
+
+
 
 module.exports = router

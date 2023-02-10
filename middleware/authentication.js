@@ -1,11 +1,11 @@
-const jwt = require('jsonwebtoken');
+const admin = require('firebase-admin')
 
-module.exports = (req, res, next) => {
+module.exports = async (req, res, next) => {
     try {
         const token = req.header?.('Authorization')?.split(" ")[1];
-        req.user = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
+        req.user = await admin.auth().verifyIdToken(token);
         next()
     } catch (error) {
-        res.status(401).json({message: 'Invalid access token'})
+        res.status(403).json({message: 'Invalid access token'})
     }
 }
