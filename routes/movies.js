@@ -3,17 +3,9 @@ const router = express.Router()
 const cors = require('cors')
 const auth = require('../middleware/authentication')
 const axios = require('../axiosClient')
-const { request } = require("express")
 
 require('dotenv').config()
 
-request.on('error', (err) => {
-    console.log("request error" + err.message)
-})
-
-process.on('uncaughtException', (err) => {
-    console.log('process error' + err.message)
-})
 
 const TREND = [
     {
@@ -40,10 +32,6 @@ router.use(express.json())
 
 router.get("/", auth,  (req, res) => {
     const data = []
-
-    req.on('error', (error) => {
-        console.log("Caught error" + error.message)
-    })
 
     const promises = TREND.map((e) => {       
         return axios.get(e.path)
