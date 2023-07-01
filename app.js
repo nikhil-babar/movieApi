@@ -25,15 +25,16 @@ admin.initializeApp({
     credential: admin.credential.cert(firebaseConfig)
 })
 
-app.use(express.json())
-app.use('/movies', movieRouter)
-app.use('/reviews', reviewRouter)
-
 app.use(cors({
     origin: [process.env.FRONTEND_URL],
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
     credentials: true
 }))
+
+app.use(express.json())
+app.use('/movies', movieRouter)
+app.use('/reviews', reviewRouter)
+
 
 mongoose.set('strictQuery', true)
 
