@@ -7,12 +7,6 @@ const bodyParser = require('body-parser')
 
 require('dotenv').config()
 
-router.use(cors({
-    origin: ['https://movie-ocean.onrender.com'],
-    methods: ['GET', 'POST', 'PUT', 'DELETE'],
-    credentials: true
-}))
-
 router.use(bodyParser.urlencoded({ extended: true }))
 router.use(express.json())
 
