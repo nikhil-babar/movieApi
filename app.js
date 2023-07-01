@@ -30,7 +30,7 @@ app.use('/movies', movieRouter)
 app.use('/reviews', reviewRouter)
 
 app.use(cors({
-    origin: ['https://movie-ocean.onrender.com'],
+    origin: [process.env.FRONTEND_URL],
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
     credentials: true
 }))
