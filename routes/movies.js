@@ -22,12 +22,6 @@ const TREND = [
     }
 ]
 
-router.use(cors({
-    origin: ['https://movie-ocean.onrender.com'],
-    methods: ['GET', 'POST', 'PUT', 'DELETE'],
-    credentials: true
-}))
-
 router.use(express.json())
 
 router.get("/", auth,  (req, res) => {
