@@ -3,6 +3,7 @@ const router = express.Router();
 const cors = require("cors");
 const auth = require("../middleware/authentication");
 const axios = require("../axiosClient");
+const redis = require("../redis");
 
 const TREND = [
   {
@@ -53,6 +54,13 @@ router.get("/search", async (req, res) => {
   try {
     const { term } = req.query;
 
+    const cache = await redis.get(`search_${term}`);
+
+    if (cache) {
+      console.log("GET request served with cache", JSON.parse(cache));
+      return res.status(200).json(JSON.parse(cache));
+    }
+
     if (!term) {
       res.status(422).json({ message: "Invalid input" });
       return;
@@ -62,8 +70,15 @@ router.get("/search", async (req, res) => {
       params: {
         query: term,
       },
-      timeout: 10000,
     });
+
+    console.log("GET request served with api call");
+
+    try {
+      await redis.set(`search_${term}`, JSON.stringify(response.results));
+    } catch (error) {
+      console.log("Error while updating cache: ", error.message);
+    }
 
     res.status(200).json(response.results);
   } catch (err) {
@@ -78,6 +93,13 @@ router.get("/genre", async (req, res) => {
     const page = req.query.page;
     const genre = req.query.genre;
 
+    const cache = await redis.get(`genre_${genre}:${page}`);
+
+    if (cache) {
+      console.log("GET request served with cache", JSON.parse(cache));
+      return res.status(200).json(JSON.parse(cache));
+    }
+
     if (isNaN(page) || isNaN(genre)) {
       res.status(422).json({ message: "Invalid parameters" });
       return;
@@ -88,13 +110,31 @@ router.get("/genre", async (req, res) => {
         page,
         with_genres: genre,
       },
-      timeout: 10000,
     });
+
+    console.log("GET request served with api call");
+
+    try {
+      await redis.set(`genre_${genre}:${page}`, JSON.stringify(response.data));
+    } catch (error) {
+      console.log("Error while updating cache: ", error.message);
+    }
 
     res.status(200).json(response.data);
   } catch (err) {
     console.log("Error occurred:", err.message);
-    res.status(500).json({ message: err.message });
+    if (err.response) {
+      // Handle HTTP response errors
+      res
+        .status(err.response.status)
+        .json({ message: err.response.statusText });
+    } else if (err.code === "ECONNABORTED") {
+      // Handle timeout errors
+      res.status(504).json({ message: "Request timed out" });
+    } else {
+      // General error handling
+      res.status(500).json({ message: "An error occurred" });
+    }
   }
 });
 
@@ -102,6 +142,13 @@ router.get("/:id", async (req, res) => {
   console.log("GET request received on /:id route");
   try {
     const movieId = req.params.id;
+
+    const cache = await redis.get(`movie_${movieId}`);
+
+    if (cache) {
+      console.log("GET request served with cache", JSON.parse(cache));
+      return res.status(200).json(JSON.parse(cache));
+    }
 
     const { data: response } = await axios.get(`/movie/${movieId}`, {
       params: {
@@ -111,13 +158,22 @@ router.get("/:id", async (req, res) => {
     });
 
     const crew = getCrewDetails(response.credits.cast, response.credits.crew);
-
-    res.status(200).json({
+    const data = {
       ...response,
       videos: response.videos.results,
       crew,
       related: response.recommendations.results,
-    });
+    };
+
+    console.log("GET request served with api call");
+
+    try {
+      await redis.set(`movie_${movieId}`, JSON.stringify(data));
+    } catch (error) {
+      console.log("Error while updating cache: ", error.message);
+    }
+
+    res.status(200).json(data);
   } catch (err) {
     console.log("Error occurred:", err.message);
     res.status(500).json({ message: err.message });

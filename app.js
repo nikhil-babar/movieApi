@@ -53,5 +53,5 @@ app.get("/", (_req, res) => {
 });
 
 app.listen(process.env.PORT, () => {
-  console.log("server on port 5000");
+  console.log("server on port: ", process.env.PORT);
 });
