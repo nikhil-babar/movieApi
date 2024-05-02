@@ -1,10 +1,14 @@
-const {default: axios} = require('axios')
+const { default: axios } = require("axios");
 
-require('dotenv').config()
+const https = require("https");
+
+const agent = new https.Agent({ keepAlive: true });
 
 module.exports = axios.create({
-    baseURL: 'https://api.themoviedb.org/3',
-    params: {
-        api_key: process.env.API_KEY
-    }
-})
+  baseURL: "https://api.themoviedb.org/3",
+  params: {
+    api_key: process.env.API_KEY,
+  },
+  timeout: 10000,
+  httpsAgent: agent,
+});
