@@ -4,6 +4,7 @@ const cors = require("cors");
 const auth = require("../middleware/authentication");
 const axios = require("../axiosClient");
 const redis = require("../redis");
+const movie = require("../models/movies");
 
 const TREND = [
   {
@@ -22,31 +23,12 @@ const TREND = [
 
 router.use(express.json());
 
-router.get("/", (req, res) => {
+router.get("/", async (req, res) => {
   console.log("GET request received on /route");
-  const data = [];
 
-  const promises = TREND.map((e) => {
-    return axios.get(e.path, {
-      timeout: 10000,
-    });
-  });
+  const response = await movie.find({});
 
-  Promise.all(promises)
-    .then((response) => {
-      for (let i = 0; i < TREND.length; i++) {
-        data.push({
-          title: TREND[i].title,
-          data: response[i].data.results,
-        });
-      }
-
-      res.status(200).json(data);
-    })
-    .catch((err) => {
-      console.log("Error occurred:", err);
-      res.status(500).json({ message: err.message });
-    });
+  return res.status(200).json(response);
 });
 
 router.get("/search", async (req, res) => {
@@ -146,34 +128,25 @@ router.get("/:id", async (req, res) => {
     const cache = await redis.get(`movie_${movieId}`);
 
     if (cache) {
-      console.log("GET request served with cache", JSON.parse(cache));
+      console.log("GET request served with cache");
       return res.status(200).json(JSON.parse(cache));
     }
 
-    const { data: response } = await axios.get(`/movie/${movieId}`, {
-      params: {
-        append_to_response: "videos,recommendations,credits",
-      },
-      timeout: 10000,
-    });
+    const response = await movie.findById(movieId);
 
-    const crew = getCrewDetails(response.credits.cast, response.credits.crew);
-    const data = {
-      ...response,
-      videos: response.videos.results,
-      crew,
-      related: response.recommendations.results,
-    };
+    if (!response) {
+      return res.sendStatus(404);
+    }
 
     console.log("GET request served with api call");
 
     try {
-      await redis.set(`movie_${movieId}`, JSON.stringify(data));
+      await redis.set(`movie_${movieId}`, JSON.stringify(response.data));
     } catch (error) {
       console.log("Error while updating cache: ", error.message);
     }
 
-    res.status(200).json(data);
+    res.status(200).json(response.data);
   } catch (err) {
     console.log("Error occurred:", err.message);
     res.status(500).json({ message: err.message });
